@@ -1,0 +1,29 @@
+from hoomd_script import *
+# create 1000 random particles of name A
+system = init.create_random(N=1000, phi_p=0.01, name='A', min_dist = 1.0)
+
+
+
+# specify Lennard-Jones interactions between particle pairs
+lj = pair.lj(r_cut=2.5)
+lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
+
+
+# integrate at constant temperature
+all = group.all()
+integrate.mode_standard(dt=0.005)
+integrate.bdnvt(group=all, T=0.75, seed=5)
+
+#msd
+analyze.msd(filename='075tempmsd.csv', groups=[group.all()], period=500)
+
+
+
+# dump an xmle file for the structure information
+xml = dump.xml(filename='075temp.xml', vis=True)
+# dump a .dcd file for the trajectory
+dump.dcd(filename='075temp.dcd', period=100)
+
+
+# run 10,000 time steps
+run(10e3)
