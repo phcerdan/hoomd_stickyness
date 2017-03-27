@@ -1,23 +1,39 @@
-from hoomd_script import *
-# create 1000 random particles of name A
-system = init.create_random(N=1000, phi_p=0.01, name='A', min_dist = 1.0)
+import hoomd
+from hoomd import md
+from hoomd import deprecated
+import argparse
+hoomd.context.initialize()
+user_args = hoomd.option.get_user()
+print(user_args)
 
+parser = argparse.ArgumentParser(description='BD Simulation with capture probability pseudo-potential')
+parser.add_argument('-T', '--temperature', action='store', type=float, default=1.0, help='Temperature of BD')
+args = parser.parse_args(user_args)
+temperature = args.temperature
+print("Temperature:", temperature)
+output_base_filename = './output/' + 'T' + str(temperature)
+
+# create 1000 random particles of name A
+system = hoomd.deprecated.init.create_random(N=1000, phi_p=0.01, name='A', min_dist = 1.0)
+nl = md.nlist.cell()
 # specify Lennard-Jones interactions between particle pairs
-lj = pair.lj(r_cut=2.5)
+lj = md.pair.lj(r_cut=2.5, nlist=nl)
 lj.pair_coeff.set('A', 'A', epsilon=1.0, sigma=1.0)
 
 # integrate at constant temperature
-all = group.all()
-integrate.mode_standard(dt=0.005)
-integrate.bdnvt(group=all, T=0.75, seed=5)
+all = hoomd.group.all()
+md.integrate.mode_standard(dt=0.005)
+hoomd.md.integrate.langevin(group=all, kT=temperature, seed=5)
 
 #msd
-analyze.msd(filename='./output/075tempmsd.csv', groups=[group.all()], period=500)
+hoomd.deprecated.analyze.msd(filename = output_base_filename + 'msd.csv', groups=[all], period=500)
 
 # dump an xmle file for the structure information
-xml = dump.xml(filename='./output/075temp.xml', vis=True)
+xml = hoomd.deprecated.dump.xml(group=all, filename = output_base_filename + '.xml', vis=True)
 # dump a .dcd file for the trajectory
-dump.dcd(filename='./output/075temp.dcd', period=100)
+hoomd.dump.dcd(filename = output_base_filename + '.dcd', period=100)
 
 # run 10,000 time steps
-run(10e2)
+hoomd.run(10e2)
+
+#vim: set ft=python:
